@@ -486,6 +486,11 @@ export default function App() {
   const wakeLockRef  = useRef(null);    // WakeLock sentinel
   const fpsCountRef  = useRef(0);       // frame counter for FPS calc
   const fpsTimerRef  = useRef(null);    // FPS interval
+  const cpuRestartRef = useRef(null);   // pending CPU restart timeout
+  const gpuRestartRef = useRef(null);   // pending GPU restart timeout
+  const testRunIdRef  = useRef(0);      // in-flight start guard
+  const wasActiveRef  = useRef(false);  // avoids redundant stop on mount
+  const gpuActiveRef  = useRef(false);  // render loop guard
 
   const maxCores = Math.max(1, (navigator.hardwareConcurrency || 4) - 1);
 
@@ -497,6 +502,17 @@ export default function App() {
   const pushLog = useCallback((msg, type = "info") => {
     const ts = new Date().toLocaleTimeString();
     setLog(prev => [...prev.slice(-60), { ts, msg, type }]);
+  }, []);
+
+  const clearRestartTimers = useCallback(() => {
+    if (cpuRestartRef.current) {
+      clearTimeout(cpuRestartRef.current);
+      cpuRestartRef.current = null;
+    }
+    if (gpuRestartRef.current) {
+      clearTimeout(gpuRestartRef.current);
+      gpuRestartRef.current = null;
+    }
   }, []);
 
   // ── CSS injection ──────────────────────────
@@ -586,7 +602,28 @@ export default function App() {
   }, [pushLog]);
 
   // ── GPU stressor ───────────────────────────
+  const stopGPU = useCallback(() => {
+    gpuActiveRef.current = false;
+    const hadActive = Boolean(rafRef.current || fpsTimerRef.current || glRef.current);
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    if (fpsTimerRef.current) { clearInterval(fpsTimerRef.current); fpsTimerRef.current = null; }
+    // Reset WebGL context
+    if (glRef.current) {
+      const { gl } = glRef.current;
+      const ext = gl.getExtension("WEBGL_lose_context");
+      if (ext) ext.loseContext();
+      glRef.current = null;
+    }
+    if (hadActive) {
+      setGpuFPS(0);
+      pushLog("GPU shader halted", "info");
+    }
+  }, [pushLog]);
+
   const startGPU = useCallback((iterations) => {
+    if (rafRef.current || fpsTimerRef.current || glRef.current) {
+      stopGPU();
+    }
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -595,12 +632,13 @@ export default function App() {
       pushLog("WebGL context unavailable — GPU stress disabled", "err");
       return;
     }
+    gpuActiveRef.current = true;
     glRef.current = ctx;
 
     let startTime = performance.now();
-    let last = performance.now();
 
     const render = (now) => {
+      if (!gpuActiveRef.current || !glRef.current) return;
       const { gl, uRes, uTime, uIter } = glRef.current;
       const W = canvas.width;
       const H = canvas.height;
@@ -626,27 +664,16 @@ export default function App() {
     }, 1000);
 
     pushLog(`GPU shader running — depth ${iterations}`, "ok");
-  }, [pushLog]);
-
-  const stopGPU = useCallback(() => {
-    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
-    if (fpsTimerRef.current) { clearInterval(fpsTimerRef.current); fpsTimerRef.current = null; }
-    // Reset WebGL context
-    if (glRef.current) {
-      const { gl } = glRef.current;
-      const ext = gl.getExtension("WEBGL_lose_context");
-      if (ext) ext.loseContext();
-      glRef.current = null;
-    }
-    setGpuFPS(0);
-    pushLog("GPU shader halted", "info");
-  }, [pushLog]);
+  }, [pushLog, stopGPU]);
 
   // ── Master start/stop ──────────────────────
   const startTest = useCallback(async () => {
+    const runId = ++testRunIdRef.current;
     pushLog("═══ TEST SEQUENCE INITIATED ═══", "ok");
 
     // Timer
+    clearRestartTimers();
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     startTimeRef.current = Date.now();
     timerRef.current = setInterval(() => {
       setElapsedMs(Date.now() - startTimeRef.current);
@@ -654,6 +681,10 @@ export default function App() {
 
     // Wake lock
     await requestWakeLock();
+    if (testRunIdRef.current !== runId) {
+      await releaseWakeLock();
+      return;
+    }
 
     // CPU
     if (stressMode === "cpu" || stressMode === "both") {
@@ -667,12 +698,14 @@ export default function App() {
     if (stressMode === "gpu" || stressMode === "both") {
       startGPU(intensityLevel);
     }
-  }, [stressMode, intensityLevel, maxCores, requestWakeLock, startCPU, startGPU, pushLog]);
+  }, [stressMode, intensityLevel, maxCores, requestWakeLock, releaseWakeLock, startCPU, startGPU, pushLog, clearRestartTimers]);
 
   const stopTest = useCallback(async () => {
+    testRunIdRef.current += 1;
     pushLog("═══ TEST SEQUENCE HALTED ═══", "warn");
 
     // Timer
+    clearRestartTimers();
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
 
     // Stop stressors
@@ -681,26 +714,34 @@ export default function App() {
 
     // Release wake lock
     await releaseWakeLock();
-  }, [stopCPU, stopGPU, releaseWakeLock, pushLog]);
+  }, [stopCPU, stopGPU, releaseWakeLock, pushLog, clearRestartTimers]);
 
   // Toggle main switch
   const toggleTest = useCallback(() => {
+    setIsTestActive(prev => !prev);
+  }, []);
+
+  // Start/stop on state change
+  useEffect(() => {
     if (isTestActive) {
-      setIsTestActive(false);
-      stopTest();
-    } else {
-      setIsTestActive(true);
+      wasActiveRef.current = true;
       startTest();
+      return;
+    }
+    if (wasActiveRef.current) {
+      wasActiveRef.current = false;
+      stopTest();
     }
   }, [isTestActive, startTest, stopTest]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      clearRestartTimers();
       stopCPU();
       stopGPU();
       releaseWakeLock();
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     };
   }, []); // eslint-disable-line
 
@@ -713,11 +754,19 @@ export default function App() {
     if (stressMode === "cpu" || stressMode === "both") {
       stopCPU();
       const threads = stressMode === "both" ? Math.min(val, maxCores) : val;
-      setTimeout(() => startCPU(threads), 50);
+      if (cpuRestartRef.current) clearTimeout(cpuRestartRef.current);
+      cpuRestartRef.current = setTimeout(() => {
+        cpuRestartRef.current = null;
+        startCPU(threads);
+      }, 50);
     }
     if (stressMode === "gpu" || stressMode === "both") {
       stopGPU();
-      setTimeout(() => startGPU(val), 50);
+      if (gpuRestartRef.current) clearTimeout(gpuRestartRef.current);
+      gpuRestartRef.current = setTimeout(() => {
+        gpuRestartRef.current = null;
+        startGPU(val);
+      }, 50);
     }
   }, [isTestActive, stressMode, maxCores, stopCPU, startCPU, stopGPU, startGPU]);
 
@@ -727,10 +776,20 @@ export default function App() {
     if (!isTestActive) return;
     stopCPU();
     stopGPU();
-    setTimeout(() => {
-      if (mode === "cpu" || mode === "both") startCPU(Math.min(intensityLevel, maxCores));
-      if (mode === "gpu" || mode === "both") startGPU(intensityLevel);
-    }, 80);
+    if (cpuRestartRef.current) clearTimeout(cpuRestartRef.current);
+    if (gpuRestartRef.current) clearTimeout(gpuRestartRef.current);
+    if (mode === "cpu" || mode === "both") {
+      cpuRestartRef.current = setTimeout(() => {
+        cpuRestartRef.current = null;
+        startCPU(Math.min(intensityLevel, maxCores));
+      }, 80);
+    }
+    if (mode === "gpu" || mode === "both") {
+      gpuRestartRef.current = setTimeout(() => {
+        gpuRestartRef.current = null;
+        startGPU(intensityLevel);
+      }, 80);
+    }
   }, [isTestActive, intensityLevel, maxCores, stopCPU, startCPU, stopGPU, startGPU]);
 
   const resetTimer = () => {
