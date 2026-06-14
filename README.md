@@ -4,6 +4,9 @@
 VOLTBURN is a specialized, browser-based application designed for rigorous device stress-testing. By intentionally saturating CPU cores and GPU execution units, it provides a controlled environment for battery drain analysis, thermal throttling observation, and raw performance benchmarking—all wrapped in a high-fidelity cyberpunk terminal interface.
 
 ---
+## 🖥️ Application URL
+
+https://voltburn.vercel.app/
 
 ## ✨ Key Features
 
