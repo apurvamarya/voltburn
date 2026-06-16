@@ -1,113 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-
-// ─────────────────────────────────────────────
-//  GLOBAL STYLES (injected once into <head>)
-// ─────────────────────────────────────────────
-const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --black:    #000000;
-    --green:    #00FF41;
-    --green-dim:#00AA2A;
-    --green-glow: 0 0 8px #00FF41, 0 0 20px #00FF4166, 0 0 40px #00FF4122;
-    --cyan:     #00FFFF;
-    --magenta:  #FF00AA;
-    --red:      #FF2233;
-    --text:     #C8FFC8;
-    --muted:    #3A6B3A;
-    --border:   #00FF4144;
-    --font-mono: 'Share Tech Mono', 'Courier New', monospace;
-    --font-display: 'Orbitron', 'Courier New', monospace;
-  }
-
-  html, body, #root {
-    width: 100%; height: 100%;
-    background: #000;
-    color: var(--text);
-    font-family: var(--font-mono);
-    overflow-x: hidden;
-  }
-
-  /* scanline overlay */
-  body::after {
-    content: '';
-    position: fixed; inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.08) 2px,
-      rgba(0,0,0,0.08) 4px
-    );
-    pointer-events: none;
-    z-index: 9999;
-  }
-
-  /* scrollbar */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: #000; }
-  ::-webkit-scrollbar-thumb { background: var(--green-dim); border-radius: 2px; }
-
-  /* range input */
-  input[type=range] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 4px;
-    background: var(--muted);
-    border-radius: 2px;
-    outline: none;
-    cursor: pointer;
-  }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px; height: 16px;
-    border-radius: 50%;
-    background: var(--green);
-    box-shadow: var(--green-glow);
-    cursor: pointer;
-    transition: transform .15s;
-  }
-  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
-  input[type=range]::-webkit-slider-runnable-track {
-    height: 4px;
-    border-radius: 2px;
-  }
-
-  select {
-    background: #000;
-    color: var(--green);
-    border: 1px solid var(--green-dim);
-    font-family: var(--font-mono);
-    font-size: 14px;
-    padding: 8px 12px;
-    cursor: pointer;
-    outline: none;
-    border-radius: 2px;
-    width: 100%;
-  }
-  select:focus { border-color: var(--green); box-shadow: var(--green-glow); }
-  select option { background: #000; }
-
-  @keyframes pulse-border {
-    0%, 100% { box-shadow: 0 0 6px var(--green), 0 0 12px #00FF4133; }
-    50%       { box-shadow: 0 0 14px var(--green), 0 0 30px #00FF4155, 0 0 60px #00FF4122; }
-  }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-  @keyframes flicker {
-    0%,100%{opacity:1} 92%{opacity:1} 93%{opacity:.6} 94%{opacity:1} 97%{opacity:.8} 98%{opacity:1}
-  }
-  @keyframes slide-in {
-    from { opacity:0; transform:translateY(-10px); }
-    to   { opacity:1; transform:translateY(0); }
-  }
-  @keyframes glow-pulse {
-    0%,100%{ text-shadow: 0 0 6px var(--green), 0 0 14px var(--green); }
-    50%    { text-shadow: 0 0 12px var(--green), 0 0 30px var(--green), 0 0 60px var(--green); }
-  }
-`;
+import "./voltburn.css";
 
 // ─────────────────────────────────────────────
 //  WEB WORKER SOURCE  (runs in a Blob URL)
@@ -477,15 +369,15 @@ export default function App() {
   const [log,          setLog]            = useState([]);
 
   // ── Refs ───────────────────────────────────
-  const workersRef   = useRef([]);      // active Web Workers
-  const canvasRef    = useRef(null);    // WebGL canvas
-  const glRef        = useRef(null);    // WebGL context wrapper
-  const rafRef       = useRef(null);    // requestAnimationFrame handle
-  const startTimeRef = useRef(null);    // test start timestamp
-  const timerRef     = useRef(null);    // setInterval handle for clock
-  const wakeLockRef  = useRef(null);    // WakeLock sentinel
-  const fpsCountRef  = useRef(0);       // frame counter for FPS calc
-  const fpsTimerRef  = useRef(null);    // FPS interval
+  const workersRef    = useRef([]);     // active Web Workers
+  const canvasRef     = useRef(null);   // WebGL canvas
+  const glRef         = useRef(null);   // WebGL context wrapper
+  const rafRef        = useRef(null);   // requestAnimationFrame handle
+  const startTimeRef  = useRef(null);   // test start timestamp
+  const timerRef      = useRef(null);   // setInterval handle for clock
+  const wakeLockRef   = useRef(null);   // WakeLock sentinel
+  const fpsCountRef   = useRef(0);      // frame counter for FPS calc
+  const fpsTimerRef   = useRef(null);   // FPS interval
   const cpuRestartRef = useRef(null);   // pending CPU restart timeout
   const gpuRestartRef = useRef(null);   // pending GPU restart timeout
   const testRunIdRef  = useRef(0);      // in-flight start guard
@@ -515,19 +407,6 @@ export default function App() {
     }
   }, []);
 
-  // ── CSS injection ──────────────────────────
-  useEffect(() => {
-    const tag = document.createElement("style");
-    tag.textContent = GLOBAL_CSS;
-    document.head.appendChild(tag);
-    return () => document.head.removeChild(tag);
-  }, []);
-
-  // ── Clamp intensity when mode changes ─────
-  useEffect(() => {
-    setIntensity(prev => Math.min(prev, sliderMax));
-  }, [stressMode, sliderMax]);
-
   // ── Wake Lock helpers ──────────────────────
   const requestWakeLock = useCallback(async () => {
     if (!("wakeLock" in navigator)) {
@@ -540,7 +419,6 @@ export default function App() {
       setWLStatus("active");
       pushLog("Screen Wake Lock acquired", "ok");
 
-      // Re-acquire on tab visibility change (lock is released automatically on hidden)
       wakeLockRef.current.addEventListener("release", () => {
         pushLog("Wake Lock released by system", "warn");
         setWLStatus("idle");
@@ -575,7 +453,6 @@ export default function App() {
 
   // ── CPU stressor ───────────────────────────
   const startCPU = useCallback((count) => {
-    // Terminate any existing workers first
     workersRef.current.forEach(w => w.terminate());
     workersRef.current = [];
 
@@ -589,7 +466,7 @@ export default function App() {
       w.onerror   = (e) => pushLog(`Worker ${i} error: ${e.message}`, "err");
       workersRef.current.push(w);
     }
-    URL.revokeObjectURL(url); // URL stays valid until workers are GCed
+    URL.revokeObjectURL(url);
     setWorkerCount(count);
     pushLog(`Spawned ${count} CPU worker${count > 1 ? "s" : ""}`, "ok");
   }, [pushLog]);
@@ -607,7 +484,6 @@ export default function App() {
     const hadActive = Boolean(rafRef.current || fpsTimerRef.current || glRef.current);
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
     if (fpsTimerRef.current) { clearInterval(fpsTimerRef.current); fpsTimerRef.current = null; }
-    // Reset WebGL context
     if (glRef.current) {
       const { gl } = glRef.current;
       const ext = gl.getExtension("WEBGL_lose_context");
@@ -646,7 +522,6 @@ export default function App() {
       gl.viewport(0, 0, W, H);
       gl.uniform2f(uRes, W, H);
       gl.uniform1f(uTime, (now - startTime) / 1000);
-      // Map intensity (1-10) → iterations (16 to 512)
       const iterCount = Math.round(16 + (iterations - 1) * (512 - 16) / 9);
       gl.uniform1i(uIter, iterCount);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -657,7 +532,6 @@ export default function App() {
 
     rafRef.current = requestAnimationFrame(render);
 
-    // FPS counter
     fpsTimerRef.current = setInterval(() => {
       setGpuFPS(fpsCountRef.current);
       fpsCountRef.current = 0;
@@ -671,7 +545,6 @@ export default function App() {
     const runId = ++testRunIdRef.current;
     pushLog("═══ TEST SEQUENCE INITIATED ═══", "ok");
 
-    // Timer
     clearRestartTimers();
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     startTimeRef.current = Date.now();
@@ -679,14 +552,12 @@ export default function App() {
       setElapsedMs(Date.now() - startTimeRef.current);
     }, 100);
 
-    // Wake lock
     await requestWakeLock();
     if (testRunIdRef.current !== runId) {
       await releaseWakeLock();
       return;
     }
 
-    // CPU
     if (stressMode === "cpu" || stressMode === "both") {
       const threads = stressMode === "both"
         ? Math.min(intensityLevel, maxCores)
@@ -694,7 +565,6 @@ export default function App() {
       startCPU(threads);
     }
 
-    // GPU
     if (stressMode === "gpu" || stressMode === "both") {
       startGPU(intensityLevel);
     }
@@ -704,24 +574,19 @@ export default function App() {
     testRunIdRef.current += 1;
     pushLog("═══ TEST SEQUENCE HALTED ═══", "warn");
 
-    // Timer
     clearRestartTimers();
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
 
-    // Stop stressors
     stopCPU();
     stopGPU();
 
-    // Release wake lock
     await releaseWakeLock();
   }, [stopCPU, stopGPU, releaseWakeLock, pushLog, clearRestartTimers]);
 
-  // Toggle main switch
   const toggleTest = useCallback(() => {
     setIsTestActive(prev => !prev);
   }, []);
 
-  // Start/stop on state change
   useEffect(() => {
     if (isTestActive) {
       wasActiveRef.current = true;
@@ -746,7 +611,6 @@ export default function App() {
   }, []); // eslint-disable-line
 
   // ── Intensity update while running ────────
-  // When slider changes during an active test, hot-reload the stressors
   const handleIntensityChange = useCallback((val) => {
     setIntensity(val);
     if (!isTestActive) return;
@@ -770,7 +634,6 @@ export default function App() {
     }
   }, [isTestActive, stressMode, maxCores, stopCPU, startCPU, stopGPU, startGPU]);
 
-  // Mode change while running: restart
   const handleModeChange = useCallback((mode) => {
     setStressMode(mode);
     if (!isTestActive) return;
@@ -899,7 +762,7 @@ export default function App() {
                 return "UNKNOWN";
               })()
             } />
-            <MetaRow label="WEBGL"       value={canvasRef.current ? "READY" : "INIT"} />
+            <MetaRow label="WEBGL" value={canvasRef.current ? "READY" : "INIT"} />
           </Panel>
         </div>
 
@@ -956,11 +819,7 @@ export default function App() {
 
             {/* Intensity slider */}
             <div style={{ marginBottom: 18 }}>
-              <div style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 10,
-              }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
                 <span style={{ fontSize: 10, letterSpacing: 3, color: "var(--muted)" }}>
                   {sliderLabel}
                 </span>
@@ -1006,10 +865,10 @@ export default function App() {
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {[
-                  { label: "LOW",      mode: "cpu", val: 1 },
-                  { label: "MEDIUM",   mode: "both", val: Math.ceil(maxCores / 2) },
-                  { label: "HIGH",     mode: "both", val: maxCores },
-                  { label: "GPU MAX",  mode: "gpu", val: 10 },
+                  { label: "LOW",     mode: "cpu",  val: 1 },
+                  { label: "MEDIUM",  mode: "both", val: Math.ceil(maxCores / 2) },
+                  { label: "HIGH",    mode: "both", val: maxCores },
+                  { label: "GPU MAX", mode: "gpu",  val: 10 },
                 ].map(p => (
                   <button
                     key={p.label}

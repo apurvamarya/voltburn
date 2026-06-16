@@ -1,0 +1,159 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --black:        #000000;
+  --green:        #00FF41;
+  --green-dim:    #00AA2A;
+  --green-glow:   0 0 8px #00FF41, 0 0 20px #00FF4166, 0 0 40px #00FF4122;
+  --cyan:         #00FFFF;
+  --magenta:      #FF00AA;
+  --red:          #FF2233;
+  --text:         #C8FFC8;
+  --muted:        #3A6B3A;
+  --border:       #00FF4144;
+  --font-mono:    'Share Tech Mono', 'Courier New', monospace;
+  --font-display: 'Orbitron', 'Courier New', monospace;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  background: #000;
+  color: var(--text);
+  font-family: var(--font-mono);
+  overflow-x: hidden;
+}
+
+/* Scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #000;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--green-dim);
+  border-radius: 2px;
+}
+
+/* Range input */
+input[type='range'] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--muted);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: var(--green-glow);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+input[type='range']::-webkit-slider-thumb:hover {
+  transform: scale(1.3);
+}
+input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+}
+
+/* Select */
+select {
+  background: #000;
+  color: var(--green);
+  border: 1px solid var(--green-dim);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 8px 12px;
+  cursor: pointer;
+  outline: none;
+  border-radius: 2px;
+  width: 100%;
+}
+select:focus {
+  border-color: var(--green);
+  box-shadow: var(--green-glow);
+}
+select option {
+  background: #000;
+}
+
+/* ── Animations ── */
+@keyframes pulse-border {
+  0%,
+  100% {
+    box-shadow: 0 0 6px var(--green), 0 0 12px #00ff4133;
+  }
+  50% {
+    box-shadow: 0 0 14px var(--green), 0 0 30px #00ff4155, 0 0 60px #00ff4122;
+  }
+}
+
+@keyframes blink {
+  0%,
+  100% { opacity: 1; }
+  50%   { opacity: 0; }
+}
+
+@keyframes flicker {
+  0%,
+  100% { opacity: 1; }
+  92%  { opacity: 1; }
+  93%  { opacity: 0.6; }
+  94%  { opacity: 1; }
+  97%  { opacity: 0.8; }
+  98%  { opacity: 1; }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    text-shadow: 0 0 6px var(--green), 0 0 14px var(--green);
+  }
+  50% {
+    text-shadow: 0 0 12px var(--green), 0 0 30px var(--green),
+      0 0 60px var(--green);
+  }
+}
