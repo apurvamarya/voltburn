@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import "./voltburn.css";
 
 // ─────────────────────────────────────────────
-//  WEB WORKER SOURCE  (runs in a Blob URL)
+//  WEB WORKER SOURCE
 // ─────────────────────────────────────────────
 // The worker performs continuous prime-sieve calculations to saturate one CPU core.
 const WORKER_CODE = `
