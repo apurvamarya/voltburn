@@ -24,7 +24,7 @@ export default class ErrorBoundary extends Component {
         <div style={{
           minHeight: "100vh",
           background: "#000",
-          color: "#FF2233",
+          color: "#ff2234f8",
           fontFamily: "monospace",
           padding: 24,
         }}>
@@ -33,7 +33,7 @@ export default class ErrorBoundary extends Component {
           {info?.componentStack && (
             <pre style={{
               whiteSpace: "pre-wrap",
-              color: "#3A6B3A",
+              color: "#356135",
               fontSize: 12,
             }}>
               {info.componentStack}
