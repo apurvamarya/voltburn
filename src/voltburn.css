@@ -8,9 +8,9 @@
 
 :root {
   --black:        #000000;
-  --green:        #00FF41;
+  --green:        #00FF40;
   --green-dim:    #00AA2A;
-  --green-glow:   0 0 8px #00FF41, 0 0 20px #00FF4166, 0 0 40px #00FF4122;
+  --green-glow:   0 0 8px #00FF40, 0 0 20px #00FF4166, 0 0 40px #00FF4122;
   --cyan:         #00FFFF;
   --magenta:      #FF00AA;
   --red:          #fa2335;
