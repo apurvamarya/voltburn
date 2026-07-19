@@ -113,7 +113,7 @@ select option {
 @keyframes pulse-border {
   0%,
   100% {
-    box-shadow: 0 0 6px var(--green), 0 0 12px #00ff4133;
+    box-shadow: 0 0 6px var(--green), 0 0 12px #00ff4533;
   }
   50% {
     box-shadow: 0 0 14px var(--green), 0 0 30px #00ff4155, 0 0 60px #00ff4122;
